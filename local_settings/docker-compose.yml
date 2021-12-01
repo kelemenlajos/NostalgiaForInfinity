@@ -1,0 +1,28 @@
+---
+version: '3'
+services:
+  freqtrade:
+    build:
+       context: .
+       dockerfile: "./docker/Dockerfile.custom"
+    container_name: freqtrade_pi
+    environment:
+      - TZ=Europe/Budapest
+      - PYTHONWARNINGS=d
+    restart: unless-stopped
+    volumes:
+      - "./user_data:/freqtrade/user_data"
+      - "./configs:/freqtrade/configs"
+      - "./NostalgiaForInfinityNext.py:/freqtrade/user_data/strategies/NostalgiaForInfinityNext.py"
+      - "./NostalgiaForInfinityNextGen.py:/freqtrade/user_data/strategies/NostalgiaForInfinityNextGen.py"
+      - "./NostalgiaForInfinityX.py:/freqtrade/user_data/strategies/NostalgiaForInfinityX.py"
+    ports:
+      - 8932:8932
+    command: >
+      trade
+      --logfile /freqtrade/user_data/logs/freqtrade.log
+      --db-url sqlite:////freqtrade/user_data/tradesv3.sqlite
+      --config /freqtrade/configs/blacklist-binance.json
+      --config /freqtrade/configs/pairlist-volume-binance-busd.json
+      --config /freqtrade/user_data/config.private.json
+      --strategy NostalgiaForInfinityX
