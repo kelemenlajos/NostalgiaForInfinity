@@ -1,0 +1,5 @@
+git pull
+docker-compose up --force-recreate --build -d
+docker-compose logs |less
+docker-compose down
+
