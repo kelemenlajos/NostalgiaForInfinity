@@ -1,5 +1,5 @@
 {
-    "max_open_trades": 5,
+    "max_open_trades": 6,
     "stake_currency": "BUSD",
     "stake_amount": 60,
     "tradable_balance_ratio": 0.99,
