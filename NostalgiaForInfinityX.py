@@ -110,7 +110,7 @@ class NostalgiaForInfinityX(IStrategy):
     INTERFACE_VERSION = 2
 
     def version(self) -> str:
-        return "v11.0.211"
+        return "v11.0.218"
 
     # ROI table:
     minimal_roi = {
@@ -1434,7 +1434,7 @@ class NostalgiaForInfinityX(IStrategy):
             "safe_dips_threshold_0"     : 0.032,
             "safe_dips_threshold_2"     : 0.09,
             "safe_dips_threshold_12"    : None,
-            "safe_dips_threshold_144"   : 0.4,
+            "safe_dips_threshold_144"   : 0.2,
             "safe_pump_6h_threshold"    : 0.5,
             "safe_pump_12h_threshold"   : None,
             "safe_pump_24h_threshold"   : None,
@@ -1539,8 +1539,8 @@ class NostalgiaForInfinityX(IStrategy):
             "close_above_ema_fast_len"  : "200",
             "close_above_ema_slow"      : False,
             "close_above_ema_slow_len"  : "200",
-            "sma200_rising"             : False,
-            "sma200_rising_val"         : "42",
+            "sma200_rising"             : True,
+            "sma200_rising_val"         : "48",
             "sma200_1h_rising"          : False,
             "sma200_1h_rising_val"      : "24",
             "safe_dips_threshold_0"     : 0.032,
@@ -9745,7 +9745,8 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['ewo'] > 1.0)
                     item_buy_logic.append(dataframe['cti'] < -0.9)
                     item_buy_logic.append(dataframe['r_14'] < -97.0)
-                    item_buy_logic.append(dataframe['cti_1h'] < 0.8)
+                    item_buy_logic.append(dataframe['cti_1h'] < 0.85)
+                    item_buy_logic.append(dataframe['crsi'] > 10.0)
 
                 # Condition #22 - Swing. Uptrend. Bounce from daily support level
                 elif index == 22:
@@ -10000,8 +10001,6 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['cti_15m'] < -0.9)
                     item_buy_logic.append(dataframe['r_14_15m'] < -90.0)
                     item_buy_logic.append(dataframe['r_14'] < -94.0)
-                    item_buy_logic.append(dataframe['mfi'] > 24.0)
-                    item_buy_logic.append(dataframe['r_480_1h'] < -15.0)
                     item_buy_logic.append(dataframe['crsi_1h'] > 20.0)
 
                 # Condition #43 - 15m. Semi swing. Local dip. 1h uptrend.
@@ -10049,14 +10048,13 @@ class NostalgiaForInfinityX(IStrategy):
                     # Non-Standard protections (add below)
                     item_buy_logic.append(dataframe['ema_200_1h'] > dataframe['ema_200_1h'].shift(12))
                     item_buy_logic.append(dataframe['ema_200_1h'].shift(12) > dataframe['ema_200_1h'].shift(24))
-                    item_buy_logic.append(dataframe['close'] > (dataframe['sup_level_1h'] * 0.88))
 
                     # Logic
                     item_buy_logic.append(dataframe['ema_26_15m'] > dataframe['ema_12_15m'])
-                    item_buy_logic.append((dataframe['ema_26_15m'] - dataframe['ema_12_15m']) > (dataframe['open_15m'] * 0.027))
+                    item_buy_logic.append((dataframe['ema_26_15m'] - dataframe['ema_12_15m']) > (dataframe['open_15m'] * 0.0265))
                     item_buy_logic.append((dataframe['ema_26_15m'].shift(3) - dataframe['ema_12_15m'].shift(3)) > (dataframe['open_15m'] / 100))
-                    item_buy_logic.append(dataframe['close_15m'] < (dataframe['bb20_2_low_15m'] * 0.982))
-                    item_buy_logic.append(dataframe['r_14'] < -75.0)
+                    item_buy_logic.append(dataframe['close_15m'] < (dataframe['bb20_2_low_15m'] * 0.999))
+                    item_buy_logic.append(dataframe['r_14'] < -72.0)
                     item_buy_logic.append(dataframe['crsi_1h'] > 14.0)
                     item_buy_logic.append(dataframe['volume'] < (dataframe['volume_mean_4'] * 5.0))
 
