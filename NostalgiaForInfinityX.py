@@ -114,7 +114,7 @@ class NostalgiaForInfinityX(IStrategy):
     INTERFACE_VERSION = 2
 
     def version(self) -> str:
-        return "v11.0.483"
+        return "v11.0.487"
 
     # ROI table:
     minimal_roi = {
@@ -771,7 +771,7 @@ class NostalgiaForInfinityX(IStrategy):
             "safe_pump_6h_threshold"    : 0.35,
             "safe_pump_12h_threshold"   : 0.45,
             "safe_pump_24h_threshold"   : None,
-            "safe_pump_36h_threshold"   : 0.65,
+            "safe_pump_36h_threshold"   : 0.6,
             "safe_pump_48h_threshold"   : None,
             "btc_1h_not_downtrend"      : True,
             "close_over_pivot_type"     : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
@@ -10009,8 +10009,7 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['cmf_1h'].shift(12) < 0.0)
                     item_buy_logic.append(dataframe['cmf_1h'] > 0.0)
                     item_buy_logic.append(dataframe['rsi_14'] < 50.0)
-                    item_buy_logic.append(dataframe['cti'] < 0.5)
-                    item_buy_logic.append(dataframe['rsi_14_1h'] > 67.1)
+                    item_buy_logic.append(dataframe['rsi_14_1h'] > 64.0)
                     item_buy_logic.append(dataframe['cti_1h'] < 0.25)
 
                 # Condition #17 - Semi swing. Deep buy.
@@ -10026,6 +10025,7 @@ class NostalgiaForInfinityX(IStrategy):
                 # Condition #18 - Semi swing. Local dip. BTC not negative.
                 elif index == 18:
                     # Non-Standard protections (add below)
+                    item_buy_logic.append(dataframe['close'] > (dataframe['sup_level_1h'] * 0.95))
 
                     # Logic
                     item_buy_logic.append(dataframe['ema_200_1h'] > dataframe['ema_200_1h'].shift(12))
@@ -10033,7 +10033,8 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['ema_26'] > dataframe['ema_12'])
                     item_buy_logic.append((dataframe['ema_26'] - dataframe['ema_12']) > (dataframe['open'] * 0.018))
                     item_buy_logic.append((dataframe['ema_26'].shift() - dataframe['ema_12'].shift()) > (dataframe['open'] / 100))
-                    item_buy_logic.append(dataframe['close'] < (dataframe['bb20_2_low'] * 0.982))
+                    item_buy_logic.append(dataframe['close'] < (dataframe['bb20_2_low'] * 0.996))
+                    item_buy_logic.append(dataframe['crsi_1h'] > 20.0)
 
                 # Condition #19 - Semi swing. Uptrend. Local dip.  BTC not downtrend.
                 elif index == 19:
