@@ -115,7 +115,7 @@ class NostalgiaForInfinityX(IStrategy):
     INTERFACE_VERSION = 2
 
     def version(self) -> str:
-        return "v11.0.598"
+        return "v11.0.617"
 
     # ROI table:
     minimal_roi = {
@@ -176,7 +176,7 @@ class NostalgiaForInfinityX(IStrategy):
     max_rebuy_multiplier_1 = 1.0
     max_rebuy_multiplier_2 = 0.2
     rebuy_pcts_n_0 = (-0.04, -0.05, -0.06, -0.07, -0.08, -0.09, -0.1)
-    rebuy_pcts_n_1 = (-0.08, -0.12)
+    rebuy_pcts_n_1 = (-0.07, -0.09)
     rebuy_pcts_n_2 = (-0.02, -0.025, -0.025, -0.03, -0.04, -0.045, -0.05, -0.055, -0.06, -0.08)
     rebuy_pcts_p_2 = (0.02, 0.025, 0.025, 0.03, 0.07, 0.075, 0.08, 0.085, 0.09, 0.095)
     rebuy_multi_0 = 0.15
@@ -358,13 +358,13 @@ class NostalgiaForInfinityX(IStrategy):
             "sma200_1h_rising_val"      : "50",
             "safe_dips_threshold_0"     : 0.026,
             "safe_dips_threshold_2"     : 0.06,
-            "safe_dips_threshold_12"    : 0.2,
-            "safe_dips_threshold_144"   : 0.25,
+            "safe_dips_threshold_12"    : 0.24,
+            "safe_dips_threshold_144"   : 0.44,
             "safe_pump_6h_threshold"    : 0.4,
             "safe_pump_12h_threshold"   : None,
             "safe_pump_24h_threshold"   : 0.5,
             "safe_pump_36h_threshold"   : 0.7,
-            "safe_pump_48h_threshold"   : 0.76,
+            "safe_pump_48h_threshold"   : 0.8,
             "btc_1h_not_downtrend"      : False,
             "close_over_pivot_type"     : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
             "close_over_pivot_offset"   : 1.0,
@@ -387,7 +387,7 @@ class NostalgiaForInfinityX(IStrategy):
             "safe_dips_threshold_0"     : 0.028,
             "safe_dips_threshold_2"     : 0.09,
             "safe_dips_threshold_12"    : 0.28,
-            "safe_dips_threshold_144"   : 0.25,
+            "safe_dips_threshold_144"   : 0.44,
             "safe_pump_6h_threshold"    : 0.6,
             "safe_pump_12h_threshold"   : None,
             "safe_pump_24h_threshold"   : None,
@@ -396,8 +396,8 @@ class NostalgiaForInfinityX(IStrategy):
             "btc_1h_not_downtrend"      : False,
             "close_over_pivot_type"     : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
             "close_over_pivot_offset"   : 1.0,
-            "close_under_pivot_type"    : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
-            "close_under_pivot_offset"  : 1.0
+            "close_under_pivot_type"    : "res3", # pivot, sup1, sup2, sup3, res1, res2, res3
+            "close_under_pivot_offset"  : 1.8
         },
         5: {
             "ema_fast"                  : False,
@@ -2592,7 +2592,7 @@ class NostalgiaForInfinityX(IStrategy):
             return True, 'sell_stoploss_doom_1'
 
         if (
-                (current_profit < [-0.25, -0.25, -0.25][stop_index])
+                (current_profit < [-0.12, -0.12, -0.16][stop_index])
                 and (last_candle['close'] < last_candle['ema_200'])
                 and (last_candle['bb20_width'] < 0.044)
                 and (last_candle['close'] > (last_candle['bb20_2_mid_1h'] * 0.954))
@@ -9806,18 +9806,18 @@ class NostalgiaForInfinityX(IStrategy):
                 # Condition #3 - Semi swing. Local dip.
                 elif index == 3:
                     # Non-Standard protections
-                    item_buy_logic.append(dataframe['close'] > (dataframe['sup_level_1h'] * 0.9))
 
                     # Logic
                     item_buy_logic.append(dataframe['bb40_2_low'].shift().gt(0))
-                    item_buy_logic.append(dataframe['bb40_2_delta'].gt(dataframe['close'] * 0.05))
+                    item_buy_logic.append(dataframe['bb40_2_delta'].gt(dataframe['close'] * 0.048))
                     item_buy_logic.append(dataframe['closedelta'].gt(dataframe['close'] * 0.024))
                     item_buy_logic.append(dataframe['tail'].lt(dataframe['bb40_2_delta'] * 0.4))
                     item_buy_logic.append(dataframe['close'].lt(dataframe['bb40_2_low'].shift()))
                     item_buy_logic.append(dataframe['close'].le(dataframe['close'].shift()))
-                    item_buy_logic.append(dataframe['cti'] < -0.5)
+                    item_buy_logic.append(dataframe['cti'] < -0.25)
                     item_buy_logic.append(dataframe['cti_1h'] < 0.9)
-                    item_buy_logic.append(dataframe['r_480_1h'] < -2.0)
+                    item_buy_logic.append(dataframe['r_480_1h'] < -24.0)
+                    item_buy_logic.append(dataframe['crsi_1h'] > 20.0)
                     item_buy_logic.append(dataframe['volume'] < (dataframe['volume_mean_4'] * 3.2))
                     item_buy_logic.append(
                         (dataframe['btc_not_downtrend_1h'] == True)
@@ -9827,7 +9827,7 @@ class NostalgiaForInfinityX(IStrategy):
                 # Condition #4 - Semi swing. Local dip.
                 elif index == 4:
                     # Non-Standard protections
-                    item_buy_logic.append(dataframe['close'] > (dataframe['sup_level_1h'] * 0.94))
+                    item_buy_logic.append(dataframe['close'] > (dataframe['sup_level_1h'] * 0.75))
 
                     # Logic
                     item_buy_logic.append(dataframe['ema_26'] > dataframe['ema_12'])
@@ -9836,8 +9836,11 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['close'] < (dataframe['bb20_2_low'] * 0.995))
                     item_buy_logic.append(dataframe['mfi'] > 18.0)
                     item_buy_logic.append(dataframe['cti_1h'] < 0.82)
-                    item_buy_logic.append(dataframe['r_480_1h'] < -16.0)
-                    item_buy_logic.append(dataframe['crsi_1h'] > 10.0)
+                    item_buy_logic.append(dataframe['r_480_1h'] < -14.0)
+                    item_buy_logic.append(
+                        (dataframe['btc_not_downtrend_1h'] == True)
+                        | (dataframe['close'] > (dataframe['sup_level_1h'] * 0.9))
+                    )
 
                 # Condition #5 - Semi swing. Local dip. Uptrend.
                 elif index == 5:
@@ -9846,11 +9849,14 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['ema_200_1h'].shift(12) > dataframe['ema_200_1h'].shift(24))
 
                     # Logic
-                    item_buy_logic.append(dataframe['close'] < dataframe['sma_75'] * 0.932)
-                    item_buy_logic.append(dataframe['ewo'] > 3.2)
+                    item_buy_logic.append(dataframe['close'] < dataframe['sma_75'] * 0.934)
+                    item_buy_logic.append(dataframe['ewo'] > 3.0)
                     item_buy_logic.append(dataframe['cti'] < -0.9)
                     item_buy_logic.append(dataframe['r_14'] < -97.0)
-                    item_buy_logic.append(dataframe['crsi_1h'] > 18.0)
+                    item_buy_logic.append(
+                        (dataframe['btc_not_downtrend_1h'] == True)
+                        | (dataframe['crsi_1h'] > 18.0)
+                    )
 
                 # Condition #6 - Semi swing. Local dip.
                 elif index == 6:
