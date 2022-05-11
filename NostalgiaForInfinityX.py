@@ -115,7 +115,7 @@ class NostalgiaForInfinityX(IStrategy):
     INTERFACE_VERSION = 2
 
     def version(self) -> str:
-        return "v11.0.672"
+        return "v11.0.694"
 
     # ROI table:
     minimal_roi = {
@@ -182,6 +182,9 @@ class NostalgiaForInfinityX(IStrategy):
     rebuy_multi_0 = 0.15
     rebuy_multi_1 = 0.35
     rebuy_multi_2 = 1.0
+
+    # Profit maximizer
+    profit_max_enabled = False
 
     # Run "populate_indicators()" only for new candle.
     process_only_new_candles = True
@@ -281,7 +284,7 @@ class NostalgiaForInfinityX(IStrategy):
             "ema_fast"                  : False,
             "ema_fast_len"              : "26",
             "ema_slow"                  : True,
-            "ema_slow_len"              : "12",
+            "ema_slow_len"              : "50",
             "close_above_ema_fast"      : False,
             "close_above_ema_fast_len"  : "200",
             "close_above_ema_slow"      : False,
@@ -302,8 +305,8 @@ class NostalgiaForInfinityX(IStrategy):
             "btc_1h_not_downtrend"      : False,
             "close_over_pivot_type"     : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
             "close_over_pivot_offset"   : 1.0,
-            "close_under_pivot_type"    : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
-            "close_under_pivot_offset"  : 1.0
+            "close_under_pivot_type"    : "res3", # pivot, sup1, sup2, sup3, res1, res2, res3
+            "close_under_pivot_offset"  : 1.6
         },
         2: {
             "ema_fast"                  : False,
@@ -347,7 +350,7 @@ class NostalgiaForInfinityX(IStrategy):
             "sma200_1h_rising"          : False,
             "sma200_1h_rising_val"      : "50",
             "safe_dips_threshold_0"     : 0.026,
-            "safe_dips_threshold_2"     : 0.06,
+            "safe_dips_threshold_2"     : 0.08,
             "safe_dips_threshold_12"    : 0.24,
             "safe_dips_threshold_144"   : 0.44,
             "safe_pump_6h_threshold"    : 0.4,
@@ -359,7 +362,7 @@ class NostalgiaForInfinityX(IStrategy):
             "close_over_pivot_type"     : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
             "close_over_pivot_offset"   : 1.0,
             "close_under_pivot_type"    : "res3", # pivot, sup1, sup2, sup3, res1, res2, res3
-            "close_under_pivot_offset"  : 1.1
+            "close_under_pivot_offset"  : 1.4
         },
         4: {
             "ema_fast"                  : False,
@@ -1893,7 +1896,7 @@ class NostalgiaForInfinityX(IStrategy):
             "safe_pump_6h_threshold"    : 0.5,
             "safe_pump_12h_threshold"   : None,
             "safe_pump_24h_threshold"   : None,
-            "safe_pump_36h_threshold"   : None,
+            "safe_pump_36h_threshold"   : 0.75,
             "safe_pump_48h_threshold"   : 1.0,
             "btc_1h_not_downtrend"      : False,
             "close_over_pivot_type"     : "none", # pivot, sup1, sup2, sup3, res1, res2, res3
@@ -2085,7 +2088,7 @@ class NostalgiaForInfinityX(IStrategy):
         super().__init__(config)
         if self.target_profit_cache is None:
             self.target_profit_cache = Cache(
-                self.config["user_data_dir"] / "data-nfi-profit_target_by_pair.json"
+                self.config["user_data_dir"] / "nfi-profit_maximizer.json"
             )
 
         # If the cached data hasn't changed, it's a no-op
@@ -9060,6 +9063,23 @@ class NostalgiaForInfinityX(IStrategy):
 
         return False, None
 
+    def mark_profit_target(self, pair: str, sell: bool, signal_name: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float, last_candle, previous_candle_1) -> tuple:
+        if self.profit_max_enabled:
+            if sell and (signal_name is not None):
+                return pair, signal_name
+
+        return None, None
+
+    def sell_profit_target(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float, last_candle, previous_candle_1, previous_rate, previous_profit,  previous_sell_reason, previous_time_profit_reached) -> tuple:
+        if self.profit_max_enabled:
+            if (previous_sell_reason == "sell_stoploss_u_e_1"):
+                if (current_profit < (previous_profit - 0.01)):
+                    return True, previous_sell_reason
+            elif (current_profit < (previous_profit - 0.005)):
+                return True, previous_sell_reason
+
+        return False, None
+
     def custom_sell(self, pair: str, trade: 'Trade', current_time: 'datetime', current_rate: float,
                     current_profit: float, **kwargs):
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
@@ -9094,6 +9114,9 @@ class NostalgiaForInfinityX(IStrategy):
                     max_profit = ((trade.max_rate - initial_entry.average) / initial_entry.average)
                     max_loss = ((initial_entry.average - trade.min_rate) / trade.min_rate)
 
+        sell = False
+        signal_name = None
+
         # Long mode
         if all(c in ['31', '32', '33', '34', '35', '36'] for c in buy_tags):
             sell, signal_name = self.sell_long_mode(current_profit, max_profit, max_loss, last_candle, previous_candle_1, previous_candle_2, previous_candle_3, previous_candle_4, previous_candle_5, trade, current_time, buy_tag)
@@ -9103,65 +9126,86 @@ class NostalgiaForInfinityX(IStrategy):
             return None
 
         # Quick sell mode
-        if all(c in ['empty', '58', '59', '60', '61', '62', '63', '64', '65'] for c in buy_tags):
-            sell, signal_name = self.sell_quick_mode(current_profit, max_profit, last_candle, previous_candle_1)
-            if sell and (signal_name is not None):
-                return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            if all(c in ['empty', '58', '59', '60', '61', '62', '63', '64', '65'] for c in buy_tags):
+                sell, signal_name = self.sell_quick_mode(current_profit, max_profit, last_candle, previous_candle_1)
+                if sell and (signal_name is not None):
+                    return f"{signal_name} ( {buy_tag})"
+
+        # Rapid sell mode
+        if not sell:
+            if all(c in ['66'] for c in buy_tags):
+                sell, signal_name = self.sell_rapid_mode(trade, current_time, current_profit, max_profit, last_candle, previous_candle_1)
+                if sell and (signal_name is not None):
+                    return f"{signal_name} ( {buy_tag})"
 
         # Original sell signals
-        sell, signal_name = self.sell_signals(current_profit, max_profit, max_loss, last_candle, previous_candle_1, previous_candle_2, previous_candle_3, previous_candle_4, previous_candle_5, trade, current_time, buy_tag)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_signals(current_profit, max_profit, max_loss, last_candle, previous_candle_1, previous_candle_2, previous_candle_3, previous_candle_4, previous_candle_5, trade, current_time, buy_tag)
 
         # Stoplosses
-        sell, signal_name = self.sell_stoploss(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_stoploss(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
 
         # Over EMA200, main profit targets
-        sell, signal_name = self.sell_over_main(current_profit, last_candle)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_over_main(current_profit, last_candle)
 
         # Under EMA200, main profit targets
-        sell, signal_name = self.sell_under_main(current_profit, last_candle)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_under_main(current_profit, last_candle)
 
         # Recover
-        sell, signal_name = self.sell_recover(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_recover(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
 
         # Williams %R based sells
-        sell, signal_name = self.sell_r(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_r(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
 
         # Trailing
-        sell, signal_name = self.sell_trail(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_trail(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
 
         # The pair is descending
-        sell, signal_name = self.sell_dec_main(current_profit, last_candle)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_dec_main(current_profit, last_candle)
 
         # Sell logic for pumped pairs
-        sell, signal_name = self.sell_pump_main(current_profit, last_candle)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_pump_main(current_profit, last_candle)
 
         # The pair is pumped, stoploss
-        sell, signal_name = self.sell_pump_stoploss(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_pump_stoploss(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
 
         # Pivot points based sells
-        sell, signal_name = self.sell_pivot(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
-        if sell and (signal_name is not None):
-            return f"{signal_name} ( {buy_tag})"
+        if not sell:
+            sell, signal_name = self.sell_pivot(current_profit, max_profit, max_loss, last_candle, previous_candle_1, trade, current_time)
+
+        # Profit Target Signal
+        # Check if pair exist on target_profit_cache
+        if self.target_profit_cache is not None and pair in self.target_profit_cache.data:
+            previous_rate = self.target_profit_cache.data[pair]['rate']
+            previous_profit = self.target_profit_cache.data[pair]['profit']
+            previous_sell_reason = self.target_profit_cache.data[pair]['sell_reason']
+            previous_time_profit_reached = datetime.fromisoformat(self.target_profit_cache.data[pair]['time_profit_reached'])
+
+            sell_max, signal_name_max = self.sell_profit_target(pair, trade, current_time, current_rate, current_profit, last_candle, previous_candle_1, previous_rate, previous_profit, previous_sell_reason, previous_time_profit_reached)
+            if sell_max and signal_name_max is not None:
+                return f"{signal_name_max}_m ( {buy_tag})"
+
+        if sell and signal_name is not None:
+            pair, mark_signal = self.mark_profit_target(pair, sell, signal_name, trade, current_time, current_rate, current_profit, last_candle, previous_candle_1)
+            if pair:
+                self._set_profit_target(pair, mark_signal, current_rate, current_profit, current_time)
+
+        if (
+                (not self.profit_max_enabled)
+                or (current_profit < 0.025)
+        ):
+            if sell and (signal_name is not None):
+                return f"{signal_name} ( {buy_tag})"
 
         return None
 
@@ -9775,14 +9819,10 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(((dataframe['close'] - dataframe['open'].rolling(12).min()) / dataframe['open'].rolling(12).min()) > 0.027)
                     item_buy_logic.append(dataframe['rsi_14'] < 33.5)
                     item_buy_logic.append(dataframe['r_32'] < -75.0)
-                    item_buy_logic.append(dataframe['mfi'] < 31.0)
+                    item_buy_logic.append(dataframe['mfi'] < 36.0)
                     item_buy_logic.append(dataframe['rsi_14_1h'] > 30.0)
                     item_buy_logic.append(dataframe['rsi_14_1h'] < 84.0)
                     item_buy_logic.append(dataframe['r_480_1h'] > -99.0)
-                    item_buy_logic.append(
-                        (dataframe['btc_not_downtrend_1h'] == True)
-                        | (dataframe['crsi_1h'] > 8.0)
-                    )
 
                 # Condition #2 - Semi swing. Local dip.
                 elif index == 2:
@@ -9803,19 +9843,23 @@ class NostalgiaForInfinityX(IStrategy):
 
                     # Logic
                     item_buy_logic.append(dataframe['bb40_2_low'].shift().gt(0))
-                    item_buy_logic.append(dataframe['bb40_2_delta'].gt(dataframe['close'] * 0.048))
+                    item_buy_logic.append(dataframe['bb40_2_delta'].gt(dataframe['close'] * 0.05))
                     item_buy_logic.append(dataframe['closedelta'].gt(dataframe['close'] * 0.024))
                     item_buy_logic.append(dataframe['tail'].lt(dataframe['bb40_2_delta'] * 0.4))
                     item_buy_logic.append(dataframe['close'].lt(dataframe['bb40_2_low'].shift()))
                     item_buy_logic.append(dataframe['close'].le(dataframe['close'].shift()))
                     item_buy_logic.append(dataframe['cti'] < -0.1)
                     item_buy_logic.append(dataframe['cti_1h'] < 0.9)
-                    item_buy_logic.append(dataframe['r_480_1h'] < -24.0)
-                    item_buy_logic.append(dataframe['crsi_1h'] > 20.0)
+                    item_buy_logic.append(dataframe['r_480_1h'] < -0.0)
                     item_buy_logic.append(dataframe['volume'] < (dataframe['volume_mean_4'] * 3.2))
+                    item_buy_logic.append(dataframe['volume_mean_12'] > (dataframe['volume_mean_24'] * 1.1))
                     item_buy_logic.append(
                         (dataframe['btc_not_downtrend_1h'] == True)
-                        | (dataframe['crsi_1h'] > 10.0)
+                        | (dataframe['crsi_1h'] > 9.0)
+                    )
+                    item_buy_logic.append(
+                        (dataframe['crsi_1h'] > 18.0)
+                        | (dataframe['close'] > (dataframe['sup_level_1h'] * 0.9))
                     )
 
                 # Condition #4 - Semi swing. Local dip.
@@ -9835,6 +9879,7 @@ class NostalgiaForInfinityX(IStrategy):
                         (dataframe['btc_not_downtrend_1h'] == True)
                         | (dataframe['close'] > (dataframe['sup_level_1h'] * 0.9))
                     )
+                    item_buy_logic.append(dataframe['volume'] < (dataframe['volume_mean_4'] * 5.0))
 
                 # Condition #5 - Semi swing. Local dip. Uptrend.
                 elif index == 5:
@@ -9958,7 +10003,11 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['close'] < dataframe['ema_20'] * 0.999)
                     item_buy_logic.append(dataframe['ewo'] < -5.4)
                     item_buy_logic.append(dataframe['cti'] < -0.97)
-                    item_buy_logic.append(dataframe['crsi_1h'] > 12.0)
+                    item_buy_logic.append(dataframe['crsi_1h'] > 6.0)
+                    item_buy_logic.append(
+                        (dataframe['btc_not_downtrend_1h'] == True)
+                        | (dataframe['crsi_1h'] > 12.0)
+                    )
 
                 # Condition #14 - Semi swing. Strong uptrend. Local dip.
                 elif index == 14:
@@ -10627,6 +10676,10 @@ class NostalgiaForInfinityX(IStrategy):
                     item_buy_logic.append(dataframe['ha_close'] < dataframe['ha_close'].shift())
                     item_buy_logic.append(dataframe['roc_9_1h'] > 0.526)
                     item_buy_logic.append(dataframe['r_480_1h'] < -12.0)
+                    item_buy_logic.append(
+                        (dataframe['btc_not_downtrend_1h'] == True)
+                        | (dataframe['crsi_1h'] > 5.0)
+                    )
                     item_buy_logic.append(dataframe['volume'] < (dataframe['volume_mean_12'] * 1.4))
 
                 # Condition #64 - Semi swing. Squeeze momentum.
@@ -10731,7 +10784,23 @@ class NostalgiaForInfinityX(IStrategy):
             if (current_profit < self.exit_profit_offset):
                 return False
 
+        self._remove_profit_target(pair)
+
         return True
+
+    def _set_profit_target(self, pair: str, sell_reason: str, rate: float, current_profit: float, current_time: datetime):
+        self.target_profit_cache.data[pair] = {
+            "rate": rate,
+            "profit": current_profit,
+            "sell_reason": sell_reason,
+            "time_profit_reached": current_time.isoformat()
+        }
+        self.target_profit_cache.save()
+
+    def _remove_profit_target(self, pair: str):
+        if self.target_profit_cache is not None:
+            self.target_profit_cache.data.pop(pair, None)
+            self.target_profit_cache.save()
 
     def _should_hold_trade(self, trade: "Trade", rate: float, sell_reason: str) -> bool:
         if self.config['runmode'].value not in ('live', 'dry_run'):
