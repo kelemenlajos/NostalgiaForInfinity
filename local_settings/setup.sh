@@ -1,4 +1,5 @@
-cd ~/NostalgiaForInfinity
+cd ..
+mkdir user_data/logs/
 cp local_settings/docker-compose.yml .
 cp local_settings/Dockerfile.custom ./docker/
 cp local_settings/config.private.json ./user_data/
