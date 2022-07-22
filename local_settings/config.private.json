@@ -8,19 +8,14 @@
     "dry_run": false,
     "dry_run_wallet": 350,
     "cancel_open_orders_on_exit": false,
-    "position_adjustment_enable": true,
     "unfilledtimeout": {
-        "buy": 15,
-        "sell": 30
+        "buy": 10,
+        "unit": "minutes"
     },
     "order_types": {
-        "buy": "limit",
-        "sell": "limit",
-        "emergencysell": "market",
-        "forcebuy": "market",
-        "forcesell": "market",
+        "buy": "market",
+        "sell": "market",
         "stoploss": "market",
-        "stoploss_on_exchange": false,
         "stoploss_on_exchange": false
     },
     "bid_strategy": {
