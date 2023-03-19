@@ -43,9 +43,40 @@ Highly recommended to blacklist leveraged tokens (*BULL, *BEAR, *UP, *DOWN etc).
 
 Ensure that you don't override any variables in you config.json. Especially the timeframe (must be 5m).
 
-* `use_sell_signal` must set to true (or not set at all).
-* `sell_profit_only` must set to false (or not set at all).
-* `ignore_roi_if_buy_signal` must set to true (or not set at all).
+* `use_exit_signal` must set to true (or not set at all).
+* `exit_profit_only` must set to false (or not set at all).
+* `ignore_roi_if_entry_signal` must set to true (or not set at all).
+
+## Hold support
+
+### Specific Trades
+
+  In case you want to have SOME of the trades to only be sold when on profit, add a file named "nfi-hold-trades.json" in your `user_data/` directory
+
+  The contents should be similar to:
+
+  `{"trade_ids": [1, 3, 7], "profit_ratio": 0.005}`
+
+  Or, for individual profit ratios (Notice the trade ID's as strings):
+
+  `{"trade_ids": {"1": 0.001, "3": -0.005, "7": 0.05}}`
+
+  NOTE:
+   * `trade_ids` is a list of integers, the trade ID's, which you can get from the logs or from the output of the telegram `/status` command.
+   * Regardless of the defined profit ratio(s), the strategy MUST still produce a SELL signal for the HOLD support logic to run, which is to say, the trade will sell only if there's a proper sell signal AND the profit target has been reached.
+   * This feature can be completely disabled by changing `hold_support_enabled = True` to false in the strategy file.
+
+### Specific Pairs
+
+  In case you want to have some pairs to always be on held until a specific profit, using the same "nfi-hold-trades.json" file add something like:
+
+  `{"trade_pairs": {"BTC/USDT": 0.001, "ETH/USDT": -0.005}}`
+
+### Specific Trades and Pairs
+
+  It is also valid to include specific trades and pairs on the holds file, for example:
+
+  `{"trade_ids": {"1": 0.001}, "trade_pairs": {"BTC/USDT": 0.001}}`
 
 ## Donations
 
@@ -62,13 +93,12 @@ Absolutely not required. However, will be accepted as a token of appreciation.
 
 If you like to help, you can also use the following links to sign up to various exchanges:
 
-* Binance: https://accounts.binance.com/en/register?ref=EAZC47FM (5% discount on fees)
-* Kucoin: https://www.kucoin.com/r/af/QBSSSPYV (5% discount on trading fees)
-* Gate.io: https://www.gate.io/signup/8054544 (10% discount on trading fees)
-* FTX: https://ftx.com/eu/profile#a=100178030 (5% discount on trading fees)
-* OKX: https://www.okx.com/join/11749725760 (5% discount on trading fees)
+* Binance: https://accounts.binance.com/en/register?ref=C68K26A9 (20% discount on trading fees)
+* Kucoin: https://www.kucoin.com/r/af/QBSSS5J2 (20% lifetime discount on trading fees)
+* Gate.io: https://www.gate.io/signup/8054544 (20% discount on trading fees)
+* OKX: https://www.okx.com/join/11749725931 (20% discount on trading fees)
 * ByBit: https://partner.bybit.com/b/nfi
-* Huobi: https://www.huobi.com/en-us/topic/double-reward/?invite_code=ubpt2223
+* Huobi: https://www.huobi.com/en-us/v/register/double-invite/?inviter_id=11345710&invite_code=ubpt2223 (20% discount on trading fees)
 * Bitvavo: https://account.bitvavo.com/create?a=D22103A4BC (no fees for the first € 1000)
 
 ### Discord Link
