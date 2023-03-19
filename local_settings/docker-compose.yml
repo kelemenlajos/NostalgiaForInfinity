@@ -13,9 +13,8 @@ services:
     volumes:
       - "./user_data:/freqtrade/user_data"
       - "./configs:/freqtrade/configs"
-      - "./NostalgiaForInfinityNext.py:/freqtrade/user_data/strategies/NostalgiaForInfinityNext.py"
-      - "./NostalgiaForInfinityNextGen.py:/freqtrade/user_data/strategies/NostalgiaForInfinityNextGen.py"
       - "./NostalgiaForInfinityX.py:/freqtrade/user_data/strategies/NostalgiaForInfinityX.py"
+      - "./NostalgiaForInfinityX2.py:/freqtrade/user_data/strategies/NostalgiaForInfinityX2.py"      
     ports:
       - 8932:8932
     command: >
