@@ -1,31 +1,29 @@
 ---
 version: '3'
 services:
-  tests:
+  freqtrade:
     build:
        context: .
        dockerfile: "./docker/Dockerfile.custom"
-    container_name: freqtrade-backtesting
-    volumes:
-      - "./:/testing"
-    command: >
-      python -m pytest -ra -vv -s --log-cli-level=info --artifacts-path=artifacts/ ${EXTRA_ARGS:-tests/}
-    entrypoint: []
-    working_dir: /testing
-  backtesting:
-    build:
-       context: .
-       dockerfile: "./docker/Dockerfile.custom"
-    container_name: freqtrade-backtesting
+    container_name: freqtrade_pi
+    environment:
+      - TZ=Europe/Budapest
+      - PYTHONWARNINGS=d
+    restart: unless-stopped
     volumes:
       - "./user_data:/freqtrade/user_data"
-      - "./NostalgiaForInfinityX2.py:/freqtrade/NostalgiaForInfinityX2.py"
+      - "./configs:/freqtrade/configs"
+      - "./NostalgiaForInfinityNext.py:/freqtrade/user_data/strategies/NostalgiaForInfinityNext.py"
+      - "./NostalgiaForInfinityNextGen.py:/freqtrade/user_data/strategies/NostalgiaForInfinityNextGen.py"
+      - "./NostalgiaForInfinityX.py:/freqtrade/user_data/strategies/NostalgiaForInfinityX.py"
+    ports:
+      - 8932:8932
     command: >
-      backtesting
-      --datadir user_data/data/${EXCHANGE:-binance}
-      --strategy-list NostalgiaForInfinityX2
-      --timerange ${TIMERANGE:-20210601-20210701}
-      --config user_data/data/pairlists.json
-      --config user_data/data/${EXCHANGE:-binance}-usdt-static.json
-      --max-open-trades ${MAX_OPEN_TRADES:-5}
-      --stake-amount ${STAKE_AMOUNT:-unlimited}
+      trade
+      --logfile /freqtrade/user_data/logs/freqtrade.log
+      --db-url sqlite:////freqtrade/user_data/tradesv3.sqlite
+      --config /freqtrade/configs/blacklist-binance.json
+      --config /freqtrade/configs/pairlist-volume-binance-busd.json
+      --config /freqtrade/user_data/config.private.json
+      --config /freqtrade/user_data/config.secret.json
+      --strategy NostalgiaForInfinityX
